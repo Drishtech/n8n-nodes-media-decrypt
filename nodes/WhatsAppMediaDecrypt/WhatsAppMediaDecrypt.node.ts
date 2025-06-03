@@ -8,18 +8,32 @@ import {
 import axios from 'axios';
 import * as crypto from 'crypto';
 
-// HKDF implementation for WhatsApp key derivation
+// Proper HKDF implementation for WhatsApp
 function hkdf(ikm: Buffer, salt: Buffer, info: Buffer, length: number): Buffer {
+	// Extract phase
 	const prk = crypto.createHmac('sha256', salt).update(ikm).digest();
-	const infoWithCounter = Buffer.concat([info, Buffer.from([0x01])]);
-	const okm = crypto.createHmac('sha256', prk).update(infoWithCounter).digest();
+	
+	// Expand phase
+	const n = Math.ceil(length / 32);
+	let okm = Buffer.alloc(0);
+	let t = Buffer.alloc(0);
+	
+	for (let i = 1; i <= n; i++) {
+		const hmac = crypto.createHmac('sha256', prk);
+		hmac.update(t);
+		hmac.update(info);
+		hmac.update(Buffer.from([i]));
+		t = hmac.digest();
+		okm = Buffer.concat([okm, t]);
+	}
+	
 	return okm.slice(0, length);
 }
 
 function decryptWhatsAppMedia(encryptedData: Buffer, mediaKey: string, messageType: string): Buffer {
 	const mediaKeyBuffer = Buffer.from(mediaKey, 'base64');
 	
-	// WhatsApp-specific info strings for different media types
+	// WhatsApp uses different info strings for key derivation
 	const mediaInfo = {
 		'imageMessage': 'WhatsApp Image Keys',
 		'videoMessage': 'WhatsApp Video Keys', 
@@ -32,18 +46,22 @@ function decryptWhatsAppMedia(encryptedData: Buffer, mediaKey: string, messageTy
 		throw new Error(`Unsupported message type: ${messageType}`);
 	}
 	
-	// Derive keys using HKDF
-	const expanded = hkdf(mediaKeyBuffer, Buffer.alloc(32), Buffer.from(info), 112);
+	// Derive keys: 32 bytes for IV + cipher key, 32 bytes for MAC key
+	const mediaKeyExpanded = hkdf(mediaKeyBuffer, Buffer.alloc(32), Buffer.from(info, 'utf8'), 112);
 	
-	const iv = expanded.slice(0, 16);
-	const cipherKey = expanded.slice(16, 48);
-	const macKey = expanded.slice(48, 80);
+	const iv = mediaKeyExpanded.slice(0, 16);
+	const cipherKey = mediaKeyExpanded.slice(16, 48);
+	const macKey = mediaKeyExpanded.slice(48, 80);
 	
-	// The last 10 bytes are MAC, rest is encrypted data
+	// WhatsApp format: [encrypted_data][mac] where mac is last 10 bytes
+	if (encryptedData.length < 10) {
+		throw new Error('File too small to contain MAC');
+	}
+	
 	const mac = encryptedData.slice(-10);
 	const encrypted = encryptedData.slice(0, -10);
 	
-	// Verify MAC
+	// Verify HMAC-SHA256 truncated to 10 bytes
 	const computedMac = crypto.createHmac('sha256', macKey)
 		.update(iv)
 		.update(encrypted)
@@ -54,8 +72,10 @@ function decryptWhatsAppMedia(encryptedData: Buffer, mediaKey: string, messageTy
 		throw new Error('MAC verification failed - invalid media key or corrupted data');
 	}
 	
-	// Decrypt the data
+	// Decrypt using AES-256-CBC
 	const decipher = crypto.createDecipheriv('aes-256-cbc', cipherKey, iv);
+	decipher.setAutoPadding(true);
+	
 	const decrypted = Buffer.concat([
 		decipher.update(encrypted),
 		decipher.final()
@@ -136,10 +156,64 @@ export class WhatsAppMediaDecrypt implements INodeType {
 			{
 				displayName: 'MIME Type',
 				name: 'mimetype',
-				type: 'string',
+				type: 'options',
+				options: [
+					// Audio formats
+					{
+						name: 'Audio - OGG',
+						value: 'audio/ogg',
+					},
+					{
+						name: 'Audio - MP3',
+						value: 'audio/mpeg',
+					},
+					{
+						name: 'Audio - MP4',
+						value: 'audio/mp4',
+					},
+					{
+						name: 'Audio - WAV',
+						value: 'audio/wav',
+					},
+					// Image formats
+					{
+						name: 'Image - JPEG',
+						value: 'image/jpeg',
+					},
+					{
+						name: 'Image - PNG',
+						value: 'image/png',
+					},
+					{
+						name: 'Image - WebP',
+						value: 'image/webp',
+					},
+					// Video formats
+					{
+						name: 'Video - MP4',
+						value: 'video/mp4',
+					},
+					{
+						name: 'Video - WebM',
+						value: 'video/webm',
+					},
+					// Document formats
+					{
+						name: 'Document - PDF',
+						value: 'application/pdf',
+					},
+					{
+						name: 'Document - Text',
+						value: 'text/plain',
+					},
+					{
+						name: 'Document - Word',
+						value: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+					},
+				],
 				default: 'image/jpeg',
 				required: true,
-				description: 'Expected MIME type of the decrypted file (e.g., audio/ogg, image/jpeg, video/mp4)',
+				description: 'Expected MIME type of the decrypted file',
 			},
 		],
 	};
