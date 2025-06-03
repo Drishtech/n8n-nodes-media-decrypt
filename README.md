@@ -1,138 +1,198 @@
 # n8n-nodes-media-decrypt
 
-An n8n community node for decrypting WhatsApp media files with comprehensive error handling and proper MAC verification.
+An n8n community node for decrypting WhatsApp media files with comprehensive error handling, proper MAC verification, and seamless integration with OpenAI for audio transcription.
 
 ![n8n-nodes-media-decrypt](https://img.shields.io/badge/n8n-community%20node-blue)
-![Version](https://img.shields.io/badge/version-0.1.3-green)
+![Version](https://img.shields.io/badge/version-0.1.4-green)
+![License](https://img.shields.io/badge/license-MIT-blue)
 
 ## Installation
 
-To install this node in your n8n instance:
+### Install from GitHub (Recommended)
+```bash
+npm install https://github.com/rompelompe/n8n-nodes-media-decrypt
+```
 
+### Install from npm (when published)
 ```bash
 npm install n8n-nodes-media-decrypt
 ```
 
 ## Features
 
-- ✅ **Decrypt WhatsApp media files** (images, videos, audio, documents)
-- ✅ **Proper MAC verification** with multiple fallback methods
-- ✅ **Smart MIME type selection** based on message type
-- ✅ **WhatsApp icon display** in n8n interface (fixed in v0.1.3)
-- ✅ **Comprehensive error handling** with detailed debugging information
-- ✅ **Input validation** and retry logic for downloads
-- ✅ **Support for large files** (up to 100MB)
+- 🔓 **Decrypt WhatsApp media files** (images, videos, audio, documents)
+- ✅ **Proper MAC verification** with multiple fallback methods for enhanced compatibility
+- 🎯 **Dynamic MIME type dropdown** that changes based on message type selection
+- 🤖 **OpenAI Integration Ready** - binary output compatible with OpenAI transcription
+- 🎨 **WhatsApp icon display** in n8n interface
+- 🛡️ **Comprehensive error handling** with detailed debugging information
+- 🔄 **Retry logic** for downloads with exponential backoff
+- 📊 **Support for large files** (up to 100MB)
+- 🔍 **Enhanced input validation** with base64 media key verification
 
 ## Usage
 
+### Basic Setup
 1. **URL**: The direct download URL of the encrypted WhatsApp media file (usually ends with `.enc`)
 2. **Media Key**: The base64-encoded media key from the WhatsApp message metadata
-3. **Message Type**: Select the appropriate message type:
-   - **Audio Message** - for voice messages and audio files
-   - **Image Message** - for photos and images  
-   - **Video Message** - for videos and GIFs
-   - **Document Message** - for documents and other files
-4. **MIME Type**: The expected MIME type of the decrypted file (automatically filtered based on message type)
+3. **Message Type**: Select the appropriate message type - this dynamically updates available MIME types
+4. **MIME Type**: Select from context-aware dropdown that only shows relevant formats
 
-## Supported MIME Types
+### Integration with OpenAI
+This node is designed to work seamlessly with OpenAI's audio transcription:
 
-The MIME Type dropdown is now **context-aware** and only shows relevant options based on the selected Message Type:
+**WhatsApp Media Decrypt** → **OpenAI (Audio Transcribe)**
 
-### Audio Message Types
-- OGG (WhatsApp Voice Messages) - **Default**
+The binary output is automatically named with the generated filename, making it directly compatible with OpenAI's audio transcription service.
+
+## Dynamic MIME Type Selection
+
+The MIME Type dropdown is **context-aware** and dynamically updates based on your Message Type selection:
+
+### 🎵 Audio Message
+- **OGG (WhatsApp Voice Messages)** - Default for voice notes
 - MP3, MP4/M4A, WAV, AAC
 
-### Image Message Types  
-- JPEG - **Default**
+### 🖼️ Image Message  
+- **JPEG** - Default for photos
 - PNG, WebP, GIF
 
-### Video Message Types
-- MP4 - **Default**
-- WebM, AVI, MOV
+### 🎬 Video Message
+- **MP4** - Default for videos
+- WebM, AVI, MOV (QuickTime)
 
-### Document Message Types
-- PDF - **Default**
+### 📄 Document Message
+- **PDF** - Default for documents
 - Word (.docx), Excel (.xlsx), PowerPoint (.pptx)
 - ZIP, RAR archives
 - Plain text, Binary/Unknown files
 
-## What's Fixed in v0.1.3
+## What's New in v0.1.4
+
+### 🤖 **OpenAI Integration Fix**
+- **Fixed binary field naming** for seamless OpenAI compatibility
+- Binary data now uses filename as key instead of generic 'data'
+- **Direct compatibility** with OpenAI audio transcription workflows
+
+### 🎯 **Enhanced Dynamic Dropdown**
+- **Real-time MIME type filtering** based on message type selection
+- **Improved user experience** with context-aware options
+- **Better organization** of supported formats
+
+### 🔧 **Improved Build Process**
+- **Fixed compilation issues** that were preventing latest changes
+- **Proper file structure** in dist folder
+- **Consistent builds** across different environments
+
+## What's Fixed in v0.1.4 (Previous Releases)
 
 ### 🔧 **MAC Verification Algorithm**
 - **Complete rewrite** of the WhatsApp media decryption algorithm
-- **Proper HKDF implementation** with correct key derivation order
-- **Multiple MAC verification methods** to handle different WhatsApp versions
-- **Detailed error messages** with debugging information for troubleshooting
+- **Proper HKDF implementation** with empty 32-byte salt as per WhatsApp specification
+- **Multiple MAC verification methods** with fallback support:
+  - Primary: `HMAC-SHA256(macKey, iv + encrypted)` truncated to 10 bytes
+  - Fallback: `HMAC-SHA256(macKey, encrypted)` for older formats
+- **Enhanced debugging** with detailed error information
 
-### 🎨 **Icon Display Issue**
-- **Fixed icon path** in build process
-- **SVG icon properly copied** to dist folder during build
-- **WhatsApp icon now displays correctly** in n8n interface
+### 🎨 **Icon Display**
+- **Fixed build script** to properly copy SVG icon to dist folder
+- **Correct icon path** configuration for n8n
+- **WhatsApp icon displays** in n8n interface (may require n8n restart)
 
-### 🎯 **Smart MIME Type Dropdown**
-- **Context-aware MIME type selection** - dropdown only shows relevant formats
-- **Automatic filtering** based on message type selection
-- **Better organization** with grouped format categories
-
-### 🛡️ **Enhanced Input Validation**
-- **Comprehensive parameter validation** with detailed error messages
+### 🛡️ **Enhanced Security & Validation**
 - **Base64 media key validation** to catch encoding issues early
-- **URL and file size validation** to prevent common errors
+- **Comprehensive input validation** with specific error messages
+- **URL truncation** in logs for security
+- **No sensitive data logging**
 
-### 🔄 **Improved Download Handling**
-- **Retry logic** for failed downloads (up to 3 attempts)
-- **Increased timeout** for large files (60 seconds)
+### 🔄 **Download Reliability**
+- **Retry logic** for failed downloads (up to 3 attempts with exponential backoff)
+- **Increased timeout** to 60 seconds for large files
 - **Support for files up to 100MB**
-- **Better error reporting** for download failures
+- **User-Agent header** for better compatibility with WhatsApp servers
+- **Better error reporting** for network issues
 
 ## Troubleshooting
 
 ### MAC Verification Failed Error
-If you encounter MAC verification errors, the new version provides detailed debugging information:
+If you encounter MAC verification errors, the enhanced v0.1.4 provides detailed debugging:
 
 1. **Check the media key**: Ensure it's valid base64 and complete
-2. **Verify message type**: Must match the actual WhatsApp message type
-3. **Check the URL**: Ensure it points to the actual encrypted file
-4. **File integrity**: The download might be corrupted or incomplete
+   ```
+   Error: Media Key must be valid base64 encoded string
+   ```
 
-The error message now includes:
+2. **Verify message type**: Must match the actual WhatsApp message type
+   ```
+   Error: Invalid message type. Must be one of: audioMessage, imageMessage, videoMessage, documentMessage
+   ```
+
+3. **Check the URL**: Ensure it points to the actual encrypted file
+   ```
+   Error: Failed to download file after 3 attempts
+   ```
+
+4. **File integrity**: The download might be corrupted or incomplete
+   ```
+   Error: Downloaded file is too small (X bytes). WhatsApp encrypted files must be at least 10 bytes
+   ```
+
+The error message now includes comprehensive debug information:
 - File sizes and key lengths
 - Message type and encryption parameters
 - Specific suggestions for resolution
 
-### Icon Not Showing (Fixed in v0.1.3)
-- ✅ **Icon is now properly included** in the package
-- ✅ **Build process fixed** to copy SVG files
-- If you still don't see the icon, restart your n8n instance
+### OpenAI Integration Issues
+
+**Problem**: `The item has no binary field 'filename.ext'`
+
+**Solution**: Ensure you're using v0.1.4+ which fixes binary field naming for OpenAI compatibility.
+
+### Icon Not Showing
+If the WhatsApp icon doesn't appear:
+1. **Restart n8n completely** to clear interface cache
+2. **Clear browser cache** and refresh
+3. **Reinstall the node** if issues persist
 
 ### Installation Issues
-If you encounter installation issues:
 ```bash
-# Clear npm cache
+# Clear npm cache and reinstall
 npm cache clean --force
-
-# Reinstall the node
 npm uninstall n8n-nodes-media-decrypt
-npm install n8n-nodes-media-decrypt@latest
+npm install https://github.com/rompelompe/n8n-nodes-media-decrypt
 ```
+
+## Example Workflow
+
+### WhatsApp Audio → OpenAI Transcription
+1. **WhatsApp Media Decrypt Node**:
+   - URL: `https://example.whatsapp.net/media.enc`
+   - Media Key: `your-base64-media-key==`
+   - Message Type: `Audio Message`
+   - MIME Type: `Audio - OGG (WhatsApp Voice Messages)`
+
+2. **OpenAI Node** (Audio Transcribe):
+   - Will automatically detect the binary field from step 1
+   - Transcribes the decrypted audio to text
 
 ## Version History
 
-### v0.1.3 (Latest) 🎉
+### v0.1.4 (Latest) 🚀
+- 🤖 **OpenAI Integration**: Fixed binary field naming for seamless OpenAI compatibility
+- 🎯 **Enhanced Dynamic Dropdown**: Real-time MIME type filtering
+- 🔧 **Improved Build Process**: Fixed compilation and file structure issues
+- 📦 **Better Package Management**: Optimized for GitHub installation
+
+### v0.1.3
 - ✅ **Complete rewrite** of WhatsApp media decryption algorithm
 - ✅ **Fixed MAC verification** with proper HKDF implementation
-- ✅ **Fixed icon display** issue in n8n
 - ✅ **Smart MIME type dropdown** with context-aware filtering
 - ✅ **Enhanced error handling** with detailed debugging information
-- ✅ **Improved download reliability** with retry logic
-- ✅ **Better input validation** and comprehensive parameter checking
-- ✅ **Support for large files** (up to 100MB)
 
 ### v0.1.2
 - ✅ Enhanced MIME type dropdown with better organization
 - ✅ Smart default MIME type selection based on message type
 - ✅ Improved error messages and validation
-- ✅ Added User-Agent header for better compatibility
 
 ### v0.1.1
 - Initial release with basic decryption functionality
@@ -140,25 +200,68 @@ npm install n8n-nodes-media-decrypt@latest
 ## Technical Details
 
 ### Encryption Algorithm
-This node implements the correct WhatsApp media decryption algorithm:
+This node implements the correct WhatsApp media decryption algorithm based on the latest research:
 
-1. **HKDF Key Derivation**: Derives IV, cipher key, and MAC key from the media key
-2. **MAC Verification**: Verifies HMAC-SHA256 with multiple fallback methods
-3. **AES-256-CBC Decryption**: Decrypts the media content
-4. **Input Validation**: Comprehensive validation of all parameters
+1. **HKDF Key Derivation**: 
+   - Uses empty 32-byte salt: `Buffer.alloc(32, 0)`
+   - Derives 112 bytes: IV (16) + cipher key (32) + MAC key (32) + refKey (32)
+   
+2. **MAC Verification**: 
+   - Primary method: `HMAC-SHA256(macKey, iv + encrypted)` truncated to 10 bytes
+   - Fallback method: `HMAC-SHA256(macKey, encrypted)` for compatibility
+   
+3. **AES-256-CBC Decryption**: Decrypts the media content with proper padding
 
-### Security
+4. **Binary Output**: Uses filename as binary field key for OpenAI compatibility
+
+### Binary Data Format
+```javascript
+{
+  binary: {
+    "whatsapp_audio_2025-06-03T20-42-42.ogg": {
+      data: "base64-encoded-data",
+      fileName: "whatsapp_audio_2025-06-03T20-42-42.ogg",
+      mimeType: "audio/ogg"
+    }
+  }
+}
+```
+
+### Security Features
 - Media keys are never logged or stored
 - URLs are truncated in output for security
 - Proper error handling prevents information leakage
+- Input validation prevents injection attacks
+
+## Supported WhatsApp Media Types
+
+- ✅ **Voice Messages** (OGG format)
+- ✅ **Audio Files** (MP3, AAC, etc.)
+- ✅ **Images** (JPEG, PNG, WebP, GIF)
+- ✅ **Videos** (MP4, WebM, AVI, MOV)
+- ✅ **Documents** (PDF, Office files, Archives)
+
+## Requirements
+
+- **n8n version**: 1.0.0 or higher
+- **Node.js**: Compatible with n8n requirements
+- **Dependencies**: axios for HTTP requests
 
 ## License
 
-MIT
+MIT License - see [LICENSE.md](LICENSE.md) for details
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Please feel free to:
+- Submit bug reports or feature requests
+- Fork the repository and submit pull requests
+- Improve documentation
+
+## Repository
+
+- **GitHub**: [https://github.com/rompelompe/n8n-nodes-media-decrypt](https://github.com/rompelompe/n8n-nodes-media-decrypt)
+- **Issues**: [Report issues](https://github.com/rompelompe/n8n-nodes-media-decrypt/issues)
 
 ## Support
 
@@ -166,4 +269,8 @@ If you encounter issues:
 1. Check the troubleshooting section above
 2. Verify your inputs (media key, message type, URL)
 3. Look at the detailed error messages for specific guidance
-4. Open an issue with the debug information if needed 
+4. Open an issue on GitHub with debug information if needed
+
+---
+
+**Made with ❤️ for the n8n community** 
