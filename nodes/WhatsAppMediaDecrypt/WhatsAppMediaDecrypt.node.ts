@@ -8,6 +8,75 @@ import {
 import axios from 'axios';
 import * as crypto from 'crypto';
 
+// HKDF implementation for WhatsApp key derivation
+function hkdf(ikm: Buffer, salt: Buffer, info: Buffer, length: number): Buffer {
+	const prk = crypto.createHmac('sha256', salt).update(ikm).digest();
+	const infoWithCounter = Buffer.concat([info, Buffer.from([0x01])]);
+	const okm = crypto.createHmac('sha256', prk).update(infoWithCounter).digest();
+	return okm.slice(0, length);
+}
+
+function decryptWhatsAppMedia(encryptedData: Buffer, mediaKey: string, messageType: string): Buffer {
+	const mediaKeyBuffer = Buffer.from(mediaKey, 'base64');
+	
+	// WhatsApp-specific info strings for different media types
+	const mediaInfo = {
+		'imageMessage': 'WhatsApp Image Keys',
+		'videoMessage': 'WhatsApp Video Keys', 
+		'audioMessage': 'WhatsApp Audio Keys',
+		'documentMessage': 'WhatsApp Document Keys'
+	};
+	
+	const info = mediaInfo[messageType as keyof typeof mediaInfo];
+	if (!info) {
+		throw new Error(`Unsupported message type: ${messageType}`);
+	}
+	
+	// Derive keys using HKDF
+	const expanded = hkdf(mediaKeyBuffer, Buffer.alloc(32), Buffer.from(info), 112);
+	
+	const iv = expanded.slice(0, 16);
+	const cipherKey = expanded.slice(16, 48);
+	const macKey = expanded.slice(48, 80);
+	
+	// The last 10 bytes are MAC, rest is encrypted data
+	const mac = encryptedData.slice(-10);
+	const encrypted = encryptedData.slice(0, -10);
+	
+	// Verify MAC
+	const computedMac = crypto.createHmac('sha256', macKey)
+		.update(iv)
+		.update(encrypted)
+		.digest()
+		.slice(0, 10);
+	
+	if (!mac.equals(computedMac)) {
+		throw new Error('MAC verification failed - invalid media key or corrupted data');
+	}
+	
+	// Decrypt the data
+	const decipher = crypto.createDecipheriv('aes-256-cbc', cipherKey, iv);
+	const decrypted = Buffer.concat([
+		decipher.update(encrypted),
+		decipher.final()
+	]);
+	
+	return decrypted;
+}
+
+function getFileNameFromType(messageType: string, mimetype: string): string {
+	const extension = mimetype.split('/')[1] || 'bin';
+	const typeMap = {
+		'audioMessage': 'audio',
+		'imageMessage': 'image', 
+		'videoMessage': 'video',
+		'documentMessage': 'document'
+	};
+	
+	const prefix = typeMap[messageType as keyof typeof typeMap] || 'file';
+	return `${prefix}.${extension}`;
+}
+
 export class WhatsAppMediaDecrypt implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'WhatsApp Media Decrypt',
@@ -28,7 +97,7 @@ export class WhatsAppMediaDecrypt implements INodeType {
 				type: 'string',
 				default: '',
 				required: true,
-				description: 'URL of the encrypted WhatsApp media file',
+				description: 'URL of the encrypted WhatsApp media file (.enc)',
 			},
 			{
 				displayName: 'Media Key',
@@ -36,7 +105,7 @@ export class WhatsAppMediaDecrypt implements INodeType {
 				type: 'string',
 				default: '',
 				required: true,
-				description: 'Media key for decryption',
+				description: 'Base64-encoded media key for decryption',
 			},
 			{
 				displayName: 'Message Type',
@@ -60,7 +129,7 @@ export class WhatsAppMediaDecrypt implements INodeType {
 						value: 'documentMessage',
 					},
 				],
-				default: 'audioMessage',
+				default: 'imageMessage',
 				required: true,
 				description: 'Type of the WhatsApp message',
 			},
@@ -68,9 +137,9 @@ export class WhatsAppMediaDecrypt implements INodeType {
 				displayName: 'MIME Type',
 				name: 'mimetype',
 				type: 'string',
-				default: '',
+				default: 'image/jpeg',
 				required: true,
-				description: 'Expected MIME type of the decrypted file (e.g., audio/ogg, image/jpeg)',
+				description: 'Expected MIME type of the decrypted file (e.g., audio/ogg, image/jpeg, video/mp4)',
 			},
 		],
 	};
@@ -78,7 +147,6 @@ export class WhatsAppMediaDecrypt implements INodeType {
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const items = this.getInputData();
 		const returnData: INodeExecutionData[] = [];
-		const self = this as unknown as WhatsAppMediaDecrypt;
 
 		for (let i = 0; i < items.length; i++) {
 			try {
@@ -88,30 +156,43 @@ export class WhatsAppMediaDecrypt implements INodeType {
 				const mimetype = this.getNodeParameter('mimetype', i) as string;
 
 				// Download the encrypted file
-				const response = await axios.get(url, { responseType: 'arraybuffer' });
+				const response = await axios.get(url, { 
+					responseType: 'arraybuffer',
+					timeout: 30000
+				});
 				const encryptedData = Buffer.from(response.data);
 
-				// Decrypt the data using the mediaKey
-				const decryptedData = await self.decryptMediaData(encryptedData, mediaKey, messageType);
+				// Decrypt the WhatsApp media
+				const decryptedData = decryptWhatsAppMedia(encryptedData, mediaKey, messageType);
 
-				// Create binary data
-				const binaryData = {
-					data: decryptedData.toString('base64'),
-					fileName: self.getFileNameFromType(messageType, mimetype),
-					mimeType: mimetype,
-				};
-
+				// Create binary data for n8n
+				const fileName = getFileNameFromType(messageType, mimetype);
+				
 				returnData.push({
-					json: {},
+					json: {
+						fileName,
+						fileSize: decryptedData.length,
+						messageType,
+						mimetype,
+						success: true
+					},
 					binary: {
-						data: binaryData,
+						data: {
+							data: decryptedData.toString('base64'),
+							fileName,
+							mimeType: mimetype,
+						},
 					},
 				});
 			} catch (error) {
+				const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+				
 				if (this.continueOnFail()) {
 					returnData.push({
 						json: {
-							error: (error as Error).message,
+							error: errorMessage,
+							success: false,
+							messageType: this.getNodeParameter('messageType', i) as string,
 						},
 					});
 					continue;
@@ -124,59 +205,4 @@ export class WhatsAppMediaDecrypt implements INodeType {
 
 		return [returnData];
 	}
-
-	private async decryptMediaData(
-		encryptedData: Buffer,
-		mediaKey: string,
-		messageType: string,
-	): Promise<Buffer> {
-		// Convert mediaKey from base64 to buffer
-		const mediaKeyBuffer = Buffer.from(mediaKey, 'base64');
-
-		// Generate decryption key using HKDF
-		const info = this.getMessageTypeInfo(messageType);
-		const key = crypto.createHmac('sha256', mediaKeyBuffer)
-			.update(info)
-			.digest();
-
-		// Decrypt the data using AES-256-CBC
-		const decipher = crypto.createDecipheriv('aes-256-cbc', key, Buffer.alloc(16));
-		const decrypted = Buffer.concat([
-			decipher.update(encryptedData),
-			decipher.final(),
-		]);
-
-		return decrypted;
-	}
-
-	private getMessageTypeInfo(messageType: string): string {
-		switch (messageType) {
-			case 'audioMessage':
-				return 'WhatsApp Audio Keys';
-			case 'imageMessage':
-				return 'WhatsApp Image Keys';
-			case 'videoMessage':
-				return 'WhatsApp Video Keys';
-			case 'documentMessage':
-				return 'WhatsApp Document Keys';
-			default:
-				throw new Error(`Unsupported message type: ${messageType}`);
-		}
-	}
-
-	private getFileNameFromType(messageType: string, mimetype: string): string {
-		const extension = mimetype.split('/')[1];
-		switch (messageType) {
-			case 'audioMessage':
-				return `audio.${extension}`;
-			case 'imageMessage':
-				return `image.${extension}`;
-			case 'videoMessage':
-				return `video.${extension}`;
-			case 'documentMessage':
-				return `document.${extension}`;
-			default:
-				return `file.${extension}`;
-		}
-	}
-} 
+}
