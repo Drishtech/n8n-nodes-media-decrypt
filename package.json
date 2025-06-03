@@ -21,7 +21,11 @@
   },
   "main": "index.js",
   "scripts": {
-    "build": "tsc && cp -r nodes/WhatsAppMediaDecrypt/*.svg dist/nodes/WhatsAppMediaDecrypt/"
+    "build": "tsc && mkdir -p dist/nodes/WhatsAppMediaDecrypt && cp nodes/WhatsAppMediaDecrypt/*.svg dist/nodes/WhatsAppMediaDecrypt/",
+    "dev": "tsc --watch",
+    "format": "prettier --write .",
+    "lint": "tslint -p tsconfig.json -c tslint.json",
+    "package": "npm run build && npm pack"
   },
   "files": [
     "dist",
