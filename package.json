@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-media-decrypt",
-  "version": "0.1.1",
+  "version": "0.1.4",
   "description": "n8n community node for decrypting WhatsApp media files",
   "keywords": [
     "n8n-community-node-package",
@@ -21,7 +21,7 @@
   },
   "main": "index.js",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc && cp -r nodes/WhatsAppMediaDecrypt/*.svg dist/nodes/WhatsAppMediaDecrypt/"
   },
   "files": [
     "dist",
