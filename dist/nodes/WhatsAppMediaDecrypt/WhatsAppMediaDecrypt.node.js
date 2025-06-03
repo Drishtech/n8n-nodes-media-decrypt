@@ -456,7 +456,7 @@ class WhatsAppMediaDecrypt {
                         timestamp: new Date().toISOString()
                     },
                     binary: {
-                        data: {
+                        [fileName]: {
                             data: decryptedData.toString('base64'),
                             fileName,
                             mimeType: mimetype,
