@@ -78,6 +78,7 @@ export class WhatsAppMediaDecrypt implements INodeType {
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const items = this.getInputData();
 		const returnData: INodeExecutionData[] = [];
+		const self = this as unknown as WhatsAppMediaDecrypt;
 
 		for (let i = 0; i < items.length; i++) {
 			try {
@@ -91,12 +92,12 @@ export class WhatsAppMediaDecrypt implements INodeType {
 				const encryptedData = Buffer.from(response.data);
 
 				// Decrypt the data using the mediaKey
-				const decryptedData = await this.decryptMedia(encryptedData, mediaKey, messageType);
+				const decryptedData = await self.decryptMediaData(encryptedData, mediaKey, messageType);
 
 				// Create binary data
 				const binaryData = {
 					data: decryptedData.toString('base64'),
-					fileName: this.getFileName(messageType, mimetype),
+					fileName: self.getFileNameFromType(messageType, mimetype),
 					mimeType: mimetype,
 				};
 
@@ -110,7 +111,7 @@ export class WhatsAppMediaDecrypt implements INodeType {
 				if (this.continueOnFail()) {
 					returnData.push({
 						json: {
-							error: error.message,
+							error: (error as Error).message,
 						},
 					});
 					continue;
@@ -124,7 +125,7 @@ export class WhatsAppMediaDecrypt implements INodeType {
 		return [returnData];
 	}
 
-	private async decryptMedia(
+	private async decryptMediaData(
 		encryptedData: Buffer,
 		mediaKey: string,
 		messageType: string,
@@ -163,7 +164,7 @@ export class WhatsAppMediaDecrypt implements INodeType {
 		}
 	}
 
-	private getFileName(messageType: string, mimetype: string): string {
+	private getFileNameFromType(messageType: string, mimetype: string): string {
 		const extension = mimetype.split('/')[1];
 		switch (messageType) {
 			case 'audioMessage':
