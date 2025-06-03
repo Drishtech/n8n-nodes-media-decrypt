@@ -25,4 +25,7 @@ coverage/
 
 # Temporary files
 tmp/
-temp/ 
+temp/
+
+# Build artifacts
+*.tgz 
