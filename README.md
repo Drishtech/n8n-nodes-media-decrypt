@@ -24,7 +24,6 @@ npm install n8n-nodes-media-decrypt
 - ✅ **Proper MAC verification** with multiple fallback methods for enhanced compatibility
 - 🎯 **Dynamic MIME type dropdown** that changes based on message type selection
 - 🤖 **OpenAI Integration Ready** - binary output compatible with OpenAI transcription
-- 🎨 **WhatsApp icon display** in n8n interface
 - 🛡️ **Comprehensive error handling** with detailed debugging information
 - 🔄 **Retry logic** for downloads with exponential backoff
 - 📊 **Support for large files** (up to 100MB)
@@ -94,11 +93,6 @@ The MIME Type dropdown is **context-aware** and dynamically updates based on you
   - Fallback: `HMAC-SHA256(macKey, encrypted)` for older formats
 - **Enhanced debugging** with detailed error information
 
-### 🎨 **Icon Display**
-- **Fixed build script** to properly copy SVG icon to dist folder
-- **Correct icon path** configuration for n8n
-- **WhatsApp icon displays** in n8n interface (may require n8n restart)
-
 ### 🛡️ **Enhanced Security & Validation**
 - **Base64 media key validation** to catch encoding issues early
 - **Comprehensive input validation** with specific error messages
@@ -147,12 +141,6 @@ The error message now includes comprehensive debug information:
 **Problem**: `The item has no binary field 'filename.ext'`
 
 **Solution**: Ensure you're using v0.1.4+ which fixes binary field naming for OpenAI compatibility.
-
-### Icon Not Showing
-If the WhatsApp icon doesn't appear:
-1. **Restart n8n completely** to clear interface cache
-2. **Clear browser cache** and refresh
-3. **Reinstall the node** if issues persist
 
 ### Installation Issues
 ```bash
@@ -250,6 +238,11 @@ This node implements the correct WhatsApp media decryption algorithm based on th
 ## License
 
 MIT License - see [LICENSE.md](LICENSE.md) for details
+
+## Credits
+
+- **Original algorithm**: Based on [sostenesapollo/baileys-decode-enc-by-url](https://github.com/sostenesapollo/baileys-decode-enc-by-url)
+- **WhatsApp decryption research**: Thanks to the Baileys and reverse engineering community
 
 ## Contributing
 
