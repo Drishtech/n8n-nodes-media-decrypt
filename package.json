@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-media-decrypt",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "n8n community node for decrypting WhatsApp media files",
   "keywords": [
     "n8n-community-node-package",
