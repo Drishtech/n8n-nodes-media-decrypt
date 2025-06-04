@@ -4,20 +4,20 @@
   "description": "n8n community node for decrypting WhatsApp media files",
   "keywords": [
     "n8n-community-node-package",
-    "n8n",
     "whatsapp",
     "media",
-    "decrypt"
+    "decrypt",
+    "n8n"
   ],
   "license": "MIT",
-  "homepage": "https://github.com/rompelompe/n8n-nodes-media-decrypt",
+  "homepage": "https://github.com/Drishtech/n8n-nodes-media-decrypt",
   "author": {
-    "name": "rompelompe",
-    "email": "rompelompe@gmail.com"
+    "name": "Drishtech",
+    "email": "info@drishtech.com"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/rompelompe/n8n-nodes-media-decrypt.git"
+    "url": "git+https://github.com/Drishtech/n8n-nodes-media-decrypt.git"
   },
   "main": "index.js",
   "scripts": {

@@ -8,9 +8,11 @@ An n8n community node for decrypting WhatsApp media files with comprehensive err
 
 ## Installation
 
-### Install from GitHub (Recommended)
+To install this community node in n8n, use one of the following methods:
+
+### Method 1: Direct GitHub Installation
 ```bash
-npm install https://github.com/rompelompe/n8n-nodes-media-decrypt
+npm install https://github.com/Drishtech/n8n-nodes-media-decrypt
 ```
 
 ### Install from npm (when published)
@@ -147,7 +149,7 @@ The error message now includes comprehensive debug information:
 # Clear npm cache and reinstall
 npm cache clean --force
 npm uninstall n8n-nodes-media-decrypt
-npm install https://github.com/rompelompe/n8n-nodes-media-decrypt
+npm install https://github.com/Drishtech/n8n-nodes-media-decrypt
 ```
 
 ## Example Workflow
@@ -253,8 +255,8 @@ Contributions are welcome! Please feel free to:
 
 ## Repository
 
-- **GitHub**: [https://github.com/rompelompe/n8n-nodes-media-decrypt](https://github.com/rompelompe/n8n-nodes-media-decrypt)
-- **Issues**: [Report issues](https://github.com/rompelompe/n8n-nodes-media-decrypt/issues)
+- **GitHub**: [https://github.com/Drishtech/n8n-nodes-media-decrypt](https://github.com/Drishtech/n8n-nodes-media-decrypt)
+- **Issues**: [Report issues](https://github.com/Drishtech/n8n-nodes-media-decrypt/issues)
 
 ## Support
 
@@ -267,3 +269,5 @@ If you encounter issues:
 ---
 
 **Made with ❤️ for the n8n community** 
+
+- **Email**: info@drishtech.com 
